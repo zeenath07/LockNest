@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>File Sending & Receiving</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0; width: 100vw; height: 100vh;
+      font-family: Arial, sans-serif;
+      background: url('assets/share.png') no-repeat center center fixed;
+      background-size: cover;
+      color: #222;
+      display: flex; justify-content: center; align-items: flex-start;
+    }
+    .container {
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 2px 16px #0004;
+      padding: 24px 44px 28px 44px;
+      text-align: center;
+      min-width: 370px;
+      max-width: 96vw;
+      margin-top: 55px;
+    }
+    .section-title {
+      font-size: 1.15rem;
+      font-weight: bold;
+      margin: 7px 0 20px 0;
+      color: #222;
+      letter-spacing: 0.5px;
+    }
+    .inputrow {
+      margin-bottom: 17px;
+      display: flex; flex-direction: column; align-items: stretch; gap: 7px;
+    }
+    input, button {
+      font-family: inherit;
+    }
+    .file-label, .ip-label {
+      text-align: left; font-size: 1.04em; margin-bottom: 2px;
+    }
+    .send-btn {
+      background: #1a73e8;
+      color: #fff;
+      border: none;
+      border-radius: 13px;
+      padding: 8px 44px;
+      font-weight: bold;
+      font-size: 1.1em;
+      cursor: pointer;
+      margin: 5px 0 16px 0;
+    }
+    .send-btn:hover { background: #1256ad; }
+    .ok-btn {
+      background: #31be31; color: #fff; border: none;
+      border-radius: 17px; padding: 10px 55px;
+      font-weight: bold; font-size: 1.13em; cursor: pointer; margin-top: 10px;
+    }
+    .ok-btn:hover { background: #198b19; }
+    .incoming-section {
+      margin-top: 31px;
+      padding: 14px 0 0 0;
+      border-top: 1px solid #9996;
+    }
+    .incoming-title {
+      font-size: 1.09em; font-weight: bold; margin-bottom: 9px; margin-top: 0;
+    }
+    .file-queue {
+      min-height: 32px; margin-bottom: 12px;
+    }
+    .accept-btn {
+      background: #23a523; color: #fff; border: none; border-radius: 7px; padding: 5px 18px;
+      font-weight: 600; margin-left: 7px; cursor: pointer;
+    }
+    .accept-btn:hover { background: #106b10; }
+    .reject-btn {
+      background: #be2323; color: #fff; border: none; border-radius: 7px; padding: 5px 14px;
+      font-weight: 600; margin-left: 7px; cursor: pointer;
+    }
+    .reject-btn:hover { background: #870b0b; }
+    .small { font-size: 0.97em; color: #888; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="section-title">Send File via LAN</div>
+    <div class="inputrow">
+      <label class="file-label">Select file:
+        <input type="file" id="fileInput" />
+      </label>
+      <label class="ip-label">Receiver IP:
+        <input type="text" id="ipInput" placeholder="e.g. 192.168.1.45"/>
+      </label>
+    </div>
+    <button class="send-btn" onclick="sendFile()">Send</button>
+    <div class="popup-detail" id="popupDetail" style="margin-top:18px; min-height:2em;"></div>
+    <button class="ok-btn" style="display:none;" id="okBtn" onclick="resetStatus()">OK</button>
+
+    <div class="incoming-section">
+      <div class="incoming-title">Incoming (Receive):</div>
+      <div id="incomingBox" class="file-queue">
+        <div class="small">No incoming files.</div>
+      </div>
+    </div>
+  </div>
+  <script>
+    function humanFileSize(bytes) {
+      const thresh = 1024;
+      if (Math.abs(bytes) < thresh) return bytes + ' B';
+      const units = ['kB','MB','GB','TB','PB','EB','ZB','YB'];
+      let u = -1;
+      do {
+        bytes /= thresh; ++u;
+      } while (Math.abs(bytes) >= thresh && u < units.length - 1);
+      return bytes.toFixed(1)+' '+units[u];
+    }
+
+    async function sendFile() {
+      const fileInput = document.getElementById('fileInput');
+      const ip = document.getElementById('ipInput').value.trim();
+      const okBtn = document.getElementById('okBtn');
+      const popupDetail = document.getElementById('popupDetail');
+      okBtn.style.display = "none";
+      if (!fileInput.files[0] || !ip) {
+        popupDetail.textContent = "Choose a file and enter an IP address.";
+        return;
+      }
+      const file = fileInput.files[0];
+      popupDetail.textContent = "Sending...";
+      const formData = new FormData();
+      formData.append('file', file);
+      try {
+        const res = await fetch(`http://${ip}:5000/api/lan/file/receive`, {
+          method: "POST",
+          body: formData
+        });
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById('popupDetail').textContent = `File sent successfully to ${ip}: ${file.name} (${humanFileSize(file.size)})`;
+          okBtn.style.display = "block";
+        } else {
+          popupDetail.textContent = data.error || "Send failed!";
+        }
+      } catch (err) {
+        popupDetail.textContent = "Error. Cannot reach " + ip;
+      }
+    }
+    function resetStatus() {
+      document.getElementById('popupDetail').textContent = "";
+      document.getElementById('okBtn').style.display = "none";
+      document.getElementById('fileInput').value = "";
+      document.getElementById('ipInput').value = "";
+    }
+
+    async function refreshIncoming() {
+      const incomingBox = document.getElementById('incomingBox');
+      try {
+        const res = await fetch('http://127.0.0.1:5000/api/lan/incoming_files');
+        const files = await res.json();
+        if (!files.length) {
+          incomingBox.innerHTML = "<div class='small'>No incoming files.</div>";
+        } else {
+          incomingBox.innerHTML = files.map(f => `
+            <div style="margin-bottom:10px;">
+              <b>${f.filename}</b> <span class="small">(${humanFileSize(f.size)})</span>
+              <button class="accept-btn" onclick="acceptIncoming('${f.filename}')">Accept & Download</button>
+              <button class="reject-btn" onclick="rejectIncoming('${f.filename}')">Reject</button>
+            </div>
+          `).join('');
+        }
+      } catch {
+        incomingBox.innerHTML = "<div class='small'>Error loading incoming queue.</div>";
+      }
+    }
+
+    window.acceptIncoming = async function(filename) {
+      await fetch(`http://127.0.0.1:5000/api/lan/incoming_files/accept/${encodeURIComponent(filename)}`, {method:'POST'});
+      window.open(`http://127.0.0.1:5000/api/lan/incoming_files/${encodeURIComponent(filename)}`, '_blank');
+      refreshIncoming();
+    }
+    window.rejectIncoming = async function(filename) {
+      await fetch(`http://127.0.0.1:5000/api/lan/incoming_files/reject/${encodeURIComponent(filename)}`, {method:'POST'});
+      refreshIncoming();
+    }
+
+    setInterval(refreshIncoming, 3000);
+    refreshIncoming();
+  </script>
+</body>
+</html>

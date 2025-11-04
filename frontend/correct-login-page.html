@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>LockNest - Login</title>
+  <style>
+    /* Your existing styles unchanged */
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #fff url('assets/loginbg.png') no-repeat center center fixed;
+      background-size: cover;
+      min-height: 100vh;
+    }
+    .logo {
+      position: absolute;
+      top: 36px;
+      left: 52px;
+      z-index: 2;
+    }
+    .logo img {
+      height: 54px;
+    }
+    .back-arrow {
+      position: absolute;
+      bottom: 60px;
+      left: 54px;
+      font-size: 2.3em;
+      color: #282828;
+      cursor: pointer;
+      z-index: 3;
+    }
+    .main {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+      gap: 30px;
+      margin-top: -40px;
+    }
+    .panel {
+      background: #970002;
+      color: #fff;
+      border-radius: 18px;
+      width: 440px;
+      padding: 38px 36px 36px 36px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 3;
+      margin-bottom: 14px;
+    }
+    .panel h1 {
+      margin: 0 0 2px 0;
+      font-size: 2em;
+      text-align: center;
+    }
+    .panel p {
+      margin: 0 0 28px 0;
+      font-size: 1.07em;
+      text-align: center;
+    }
+    .form-group {
+      width: 100%;
+      margin-bottom: 18px;
+    }
+    .form-label {
+      width: 100%;
+      text-align: left;
+      font-size: 1em;
+      margin-bottom: 5px;
+      color: #fff;
+      font-weight: 400;
+    }
+    .input-row {
+      position: relative;
+      width: 100%;
+    }
+    .input {
+      width: 100%;
+      height: 32px;
+      font-size: 1em;
+      border: none;
+      border-radius: 6px;
+      padding: 0 12px;
+      outline: none;
+      margin-bottom: 10px;
+      margin-top: 2px;
+      box-sizing: border-box;
+    }
+    .show-btn {
+      position: absolute;
+      right: 8px;
+      top: 5px;
+      background: #fff;
+      color: #970002;
+      border: none;
+      border-radius: 7px;
+      padding: 2px 13px;
+      cursor: pointer;
+      font-size: 0.98em;
+      box-shadow: 0 1px 4px #aaab;
+    }
+    .forgot {
+      color: #fff9;
+      font-size: 0.96em;
+      text-decoration: underline;
+      cursor: pointer;
+      margin-left: 2px;
+      margin-bottom: 2px;
+    }
+    .unlock-btn {
+      width: 200px;
+      margin: 0 auto;
+      padding: 9px 0;
+      border: none;
+      border-radius: 26px;
+      background: #970002;
+      color: #fff;
+      font-size: 1.11em;
+      cursor: pointer;
+      box-shadow: 2px 2px 8px #4443;
+      font-weight: 600;
+      transition: background 0.15s;
+      display: block;
+      margin-bottom: 8px;
+    }
+    .unlock-btn:hover {
+      background: #c01717;
+    }
+    .links {
+      width: 240px;
+      font-size: 1em;
+      color: #970002;
+      text-align: center;
+      font-weight: 500;
+      margin: 0 auto;
+    }
+    .links a {
+      color: #970002;
+      text-decoration: underline;
+      font-weight: 600;
+    }
+    @media (max-width: 600px) {
+      .panel, .unlock-btn, .links { width: 98vw; }
+      .panel { padding: 20px 2vw 22px 2vw; }
+    }
+  </style>
+</head>
+<body>
+  <div class="logo">
+    <img src="assets/locknest_logo.png" alt="LockNest Logo" />
+  </div>
+  <span class="back-arrow" onclick="location.href='hero-page.html'">&#8592;</span>
+  <div class="main">
+    <div class="panel">
+      <h1>Welcome Back</h1>
+      <p>Login to continue</p>
+      <div class="form-group">
+        <label class="form-label" for="vaultid">Vault ID</label>
+        <input class="input" id="vaultid" placeholder="Enter Vault ID" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <div class="input-row">
+          <input class="input" id="password" type="password" placeholder="Enter Password" />
+          <button class="show-btn" type="button" onclick="togglePass()" id="togglePassBtn">Show</button>
+        </div>
+        <span class="forgot" onclick="alert('Forgot Password flow...')">Forgot Password</span>
+      </div>
+    </div>
+    <button class="unlock-btn">Unlock</button>
+    <div class="links">
+      Don't have an account? <a href="sign-up-page.html">Sign up</a>
+    </div>
+  </div>
+
+  <!-- Hidden video and canvas for intruder webcam capture -->
+  <video id="intruderCam" autoplay style="display:none;"></video>
+  <canvas id="intruderSnap" style="display:none;"></canvas>
+
+  <script>
+    function togglePass() {
+      const pass = document.getElementById('password');
+      const btn = document.getElementById('togglePassBtn');
+      if (pass.type === 'password') {
+        pass.type = 'text';
+        btn.textContent = 'Hide';
+      } else {
+        pass.type = 'password';
+        btn.textContent = 'Show';
+      }
+    }
+
+    function captureAndSendIntruderPhoto(vault_id) {
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          const video = document.getElementById('intruderCam');
+          video.srcObject = stream;
+          setTimeout(() => {
+            const canvas = document.getElementById('intruderSnap');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            const dataUrl = canvas.toDataURL('image/jpeg');
+            stream.getTracks().forEach(track => track.stop());
+            fetch('http://127.0.0.1:5000/api/intruder/report', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ vault_id: vault_id, image_base64: dataUrl })
+            });
+          }, 1200);
+        })
+        .catch((err) => {
+          console.warn('Could not access camera for intruder capture:', err);
+        });
+    }
+
+    document.querySelector('.unlock-btn').onclick = async function() {
+      const vault_id = document.getElementById('vaultid').value;
+      const password = document.getElementById('password').value;
+
+      const res = await fetch('http://127.0.0.1:5000/api/user/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vault_id, password })
+      });
+      const data = await res.json();
+
+      if (data.message) {
+        localStorage.setItem('vault_id', vault_id);
+        window.location.href = 'real-vault.html';
+      } else {
+        alert(data.error);
+        captureAndSendIntruderPhoto(vault_id);  // Capture photo on failed login
+      }
+    };
+  </script>
+</body>
+</html>

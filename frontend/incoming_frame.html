@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Incoming File</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0; width: 100vw; height: 100vh;
+      font-family: Arial, sans-serif;
+      background: #eeeeee;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #222;
+      background: url('assets/share.png') no-repeat center center fixed;
+      background-size: cover;
+    }
+    .popup {
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 2px 16px #0004;
+      padding: 26px 38px 28px 38px;
+      text-align: center;
+      min-width: 350px;
+      max-width: 97vw;
+    }
+    .popup-title {
+      font-size: 1.13rem;
+      font-weight: bold;
+      margin-bottom: 7px;
+      color: #222;
+    }
+    .popup-detail {
+      font-size: 1rem;
+      margin-bottom: 23px;
+    }
+    .btn-row {
+      margin-top: 13px;
+      display: flex;
+      justify-content: center;
+      gap: 42px;
+    }
+    .accept-btn {
+      background: #23a523;
+      color: #fff;
+      border: none;
+      border-radius: 13px;
+      padding: 9px 44px;
+      font-weight: bold;
+      font-size: 1.1em;
+      cursor: pointer;
+      min-width: 84px;
+    }
+    .accept-btn:hover {
+      background: #116e11;
+    }
+    .reject-btn {
+      background: #c41d1d;
+      color: #fff;
+      border: none;
+      border-radius: 13px;
+      padding: 9px 44px;
+      font-weight: bold;
+      font-size: 1.1em;
+      cursor: pointer;
+      min-width: 84px;
+    }
+    .reject-btn:hover {
+      background: #880d0d;
+    }
+  </style>
+</head>
+<body>
+  <div class="popup" id="popup" style="display:none;">
+    <div class="popup-title" id="incomingTitle"></div>
+    <div class="popup-detail" id="incomingDetail"></div>
+    <div class="btn-row">
+      <button class="accept-btn" id="btnAccept">Accept</button>
+      <button class="reject-btn" id="btnReject">Reject</button>
+    </div>
+  </div>
+  <script>
+    let currentIncoming = null;
+    async function pollQueue() {
+      const res = await fetch('http://127.0.0.1:5000/api/lan/incoming_files');
+      const files = await res.json();
+      if (files.length > 0) {
+        currentIncoming = files[0];
+        document.getElementById('incomingTitle').textContent = 'Incoming file: ' + currentIncoming.filename;
+        document.getElementById('incomingDetail').textContent = `Size: ${currentIncoming.size} bytes`;
+        document.getElementById('popup').style.display = 'block';
+      } else {
+        document.getElementById('popup').style.display = 'none';
+      }
+    }
+    document.getElementById('btnAccept').onclick = async () => {
+      if (!currentIncoming) return;
+      await fetch(`http://127.0.0.1:5000/api/lan/incoming_files/accept/${currentIncoming.filename}`, {method:'POST'});
+      pollQueue();
+    };
+    document.getElementById('btnReject').onclick = async () => {
+      if (!currentIncoming) return;
+      await fetch(`http://127.0.0.1:5000/api/lan/incoming_files/reject/${currentIncoming.filename}`, {method:'POST'});
+      pollQueue();
+    };
+    setInterval(pollQueue, 3000); 
+    pollQueue();
+  </script>
+</body>
+</html>

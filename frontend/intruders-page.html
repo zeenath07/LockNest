@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Intruders Page</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0;
+      height: 70%; width: 70%;
+      font-family: Arial, sans-serif;
+      background: url('assets/share.png') no-repeat center center fixed;
+      background-size: cover;
+      color: #fff;
+      box-sizing: border-box;
+    }
+    .intruders-main {
+      min-height: 100vh;
+      min-width: 100vw;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+    }
+    .intruders-header {
+      margin-top: 56px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .intruders-title {
+      font-size: 2.2rem;
+      font-weight: bold;
+      margin-bottom: 9px;
+      margin-top: 0;
+      letter-spacing: 0.5px;
+      text-align: center;
+    }
+    .intruders-desc {
+      font-size: 1.1rem;
+      opacity: 0.95;
+      text-align: center;
+      margin-bottom: 14px;
+      margin-top: 0;
+    }
+    .intruders-hr {
+      border: none;
+      border-top: 1.5px solid #fff7;
+      margin-bottom: 26px;
+      width: 72vw;
+      max-width: 1000px;
+    }
+    .intruders-grid {
+      width: 74vw;
+      display: flex;
+      flex-direction: row;
+      justify-content: flex-start;
+      align-items: flex-start;
+      gap: 25px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .intruder-card {
+      text-align: center;
+      min-width: 220px;
+      max-width: 280px;
+      margin: 0 auto;
+    }
+    .intruder-img {
+      width: 220px;
+      height: 120px;
+      border-radius: 18px;
+      object-fit: cover;
+      background: #111;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 16px #0004;
+    }
+    .intruder-info {
+      font-size: 1.05rem;
+      margin-bottom: 5px;
+      line-height: 1.5;
+      opacity: 0.95;
+    }
+    .back-arrow {
+      position: fixed;
+      left: 70px;
+      bottom: 38px;
+      font-size: 2.7rem;
+      color: #fff;
+      cursor: pointer;
+      user-select: none;
+      z-index: 4;
+      text-shadow: 0 0 6px #000b;
+    }
+    .logo-container {
+      position: fixed;
+      bottom: 50px;
+      right: 50px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 4;
+      user-select: none;
+    }
+    .logo-container img {
+      height: 48px;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .logo-container span {
+      font-size: 1.35rem;
+      font-weight: bold;
+      color: #fff;
+      letter-spacing: 0.8px;
+      text-shadow: 0 0 6px #000a;
+    }
+    @media (max-width: 800px) {
+      .intruders-hr, .intruders-grid {width: 96vw;}
+      .intruders-grid {gap: 5vw;}
+      .intruder-card, .intruder-img {width: 120px;}
+      .intruder-img {height: 66px;}
+    }
+  </style>
+</head>
+<body>
+  <div class="intruders-main">
+    <div class="intruders-header">
+      <div class="intruders-title">Intruders</div>
+      <div class="intruders-desc">
+        These were the people who touched your vault when you were not around
+      </div>
+      <hr class="intruders-hr" />
+    </div>
+    <div class="intruders-grid"></div>
+  </div>
+  <span class="back-arrow" onclick="location.href='real-vault.html'">&#8592;</span>
+  <div class="logo-container">
+    <img src="assets/locknest_logo.png" alt="LockNest Logo" />
+  </div>
+  <script>
+    const vault_id = localStorage.getItem('vault_id') || prompt('Enter Vault ID');
+
+    async function loadIntruders() {
+      const res = await fetch(`http://127.0.0.1:5000/api/intruder/logs?vault_id=${vault_id}`);
+      const data = await res.json();
+      const container = document.querySelector('.intruders-grid');
+      container.innerHTML = '';
+
+      if (!data.intruders.length) {
+        container.innerHTML = '<div style="color:white;margin:2em;text-align:center;">No intruder attempts found.</div>';
+        return;
+      }
+
+      data.intruders.forEach(log => {
+        const card = document.createElement('div');
+        card.classList.add('intruder-card');
+
+        const img = document.createElement('img');
+        img.src = `http://127.0.0.1:5000/${log.image}`;
+        img.classList.add('intruder-img');
+        img.alt = 'Intruder';
+
+        const info = document.createElement('div');
+        info.classList.add('intruder-info');
+        const dt = new Date(log.timestamp);
+        info.innerHTML = `Date: ${dt.toLocaleDateString()}<br>Time: ${dt.toLocaleTimeString()}`;
+
+        card.appendChild(img);
+        card.appendChild(info);
+        container.appendChild(card);
+      });
+    }
+
+    window.onload = loadIntruders;
+  </script>
+</body>
+</html>

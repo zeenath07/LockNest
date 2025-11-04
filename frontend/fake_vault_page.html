@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>LockNest - Fake Vault</title>
+  <style>
+    body {margin:0; font-family: Arial,sans-serif; background:#fff;}
+    .main {padding:0; margin:0; min-height:100vh; width:100vw;}
+    .vault {background:#970002; width:80vw; min-height:70vh; border-radius:10px; margin:44px auto 24px auto; box-shadow: 2px 4px 10px #ccc8;}
+    .vault h2 {color:#fff; font-size:2em; margin:0; padding:38px 0 0 42px;}
+    .file-grid {display:grid; grid-template-columns:repeat(4, 80px); gap:36px 36px; margin:36px 0 0 38px;}
+    .sidebar {position:absolute;top:130px;right:12vw;display:flex;flex-direction:column;align-items:center;z-index:2;}
+    .side-btn {margin:20px 0;padding:13px 36px; background:#970002; color:#fff; border:none; border-radius:20px; font-size:1.18em; box-shadow:2px 2px 6px #3334;cursor:pointer;}
+    .side-btn:hover {background:#bd1313;}
+    .add-btn {font-size:2em;background:#970002; color:#fff; border:none; border-radius:50%; width:48px; height:48px; margin-bottom:8px; cursor:pointer;}
+    .logo {position:absolute;bottom:28px;right:13vw;display:flex;align-items:center;}
+    .logo img {height:36px;margin-right:5px;}
+    .back-arrow {position:absolute;bottom:48px;left:7vw;font-size:2.4em;color:#970002;cursor:pointer;}
+    @media (max-width: 900px) {.file-grid {grid-template-columns:repeat(2, 80px);} .sidebar {right:3vw;} .logo {right:3vw;}}
+  </style>
+</head>
+<body>
+  <div class="main">
+    <div class="vault">
+      <h2>Uploaded Files</h2>
+      <div class="file-grid"></div>
+    </div>
+    <div class="sidebar">
+      <button class="side-btn" onclick="location.href='intruders-page.html'">Intruders</button>
+      <button class="side-btn" onclick="location.href='share-via-lan.html'">Share via LAN</button>
+      <button class="add-btn" onclick="location.href='empty-vault.html'">+</button>
+      <div style="margin-bottom:8px;font-size:1.1em;">Add Files</div>
+    </div>
+    <div class="logo">
+      <img src="https://cdn-icons-png.flaticon.com/128/2933/2933829.png">
+      <span style="font-size:1.3em;font-weight:bold;">LockNest</span>
+    </div>
+    <span class="back-arrow" onclick="location.href='correct-login-page.html'">&#8592;</span>
+  </div>
+</body>
+</html>

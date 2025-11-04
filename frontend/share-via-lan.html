@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>LockNest - Share via LAN</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0;
+      width: 100vw; height: 100vh;
+      font-family: Arial, sans-serif;
+      background: #900;
+      background: url('assets/share.png') no-repeat center center fixed;
+      background-size: cover;
+      color: #fff;
+      box-sizing: border-box;
+    }
+    .main {
+      display: flex; flex-direction: column; align-items: center;
+      width: 100vw; min-height: 100vh; justify-content: flex-start;
+    }
+    .tab-bar {
+      margin-top: 45px;
+      display: flex; gap: 24px;
+      background: #fff2; border-radius: 13px; padding: 7px 16px 5px 16px; box-shadow: 0 2px 13px #0004;
+    }
+    .tab {
+      padding: 9px 34px; border-radius: 8px 8px 0 0; background: #900c;
+      color: #fff; font-weight: 600; font-size: 1.11em; letter-spacing: 1.2px;
+      cursor: pointer; border: none; outline: none; transition: background 0.16s, color 0.16s;
+    }
+    .tab.active {
+      background: #fff; color: #900; font-weight: bold; box-shadow: 0 -3px 8px #2222;
+    }
+    .content-box {
+      min-width: 380px; background: #fff; color: #222; border-radius: 0 0 18px 18px;
+      box-shadow: 0 1.5px 14px #0002; margin-bottom: 50px; padding: 32px 44px 25px 44px;
+      width: 470px; max-width: 96vw; margin-top: 0;
+    }
+    .section-title {
+      font-size: 1.15rem; font-weight: bold; margin: 7px 0 25px 0;
+      color: #900; letter-spacing: 0.5px;
+    }
+    .inputrow {
+      margin-bottom: 19px; display: flex; flex-direction: column; align-items: stretch; gap: 9px;
+    }
+    .send-btn {
+      margin-top: 10px;
+      background: #1a73e8; color: #fff;
+      border: none; border-radius: 13px;
+      padding: 8px 44px; font-weight: bold;
+      font-size: 1.1em; cursor: pointer;
+      margin-bottom: 2em;
+    }
+    .send-btn:hover { background: #1256ad; }
+    .vault-files-list label {
+      display: flex; align-items: center; margin-bottom: 13px; font-size: 1.05em; cursor: pointer; color: #222;
+    }
+    .vault-files-list input[type="checkbox"] { margin-right: 9px; transform: scale(1.12);}
+    .device-list label { display: flex; align-items: center; margin-bottom: 15px; font-size: 1.08em; cursor: pointer;}
+    .device-icon { font-size: 1.22em; margin-right: 8px;}
+    input#manualIP, input#ipInput {
+      width: 100%; padding: 7px; margin-bottom: 6px; font-size: 1em;
+      border-radius: 8px; border: 1px solid #ccc; color: #000;
+    }
+    .received-file { margin-bottom: 15px; padding: 7px 0; border-bottom: 1px solid #eee;}
+    .save-btn, .reject-btn {
+      font-weight: 600; border: none; border-radius: 7px; padding: 4px 24px; cursor: pointer;
+      margin-left: 11px;
+    }
+    .save-btn { background: #23a523; color: #fff;}
+    .save-btn:hover { background: #106b10;}
+    .reject-btn { background: #be2323; color: #fff; }
+    .reject-btn:hover { background: #870b0b;}
+    .small { font-size: 0.97em; color: #888; }
+  </style>
+</head>
+<body>
+  <div class="main">
+    <div class="tab-bar">
+      <button id="tab-send" class="tab active" onclick="switchTab('send')">Send</button>
+      <button id="tab-recv" class="tab" onclick="switchTab('recv')">Received Files</button>
+    </div>
+    <div id="content-send" class="content-box">
+      <div class="section-title">Send File via LAN</div>
+      <div class="inputrow">
+        <div class="vault-files-list" id="vaultFilesList"></div>
+        <label>Receiver IP: <input type="text" id="ipInput" placeholder="e.g. 192.168.1.45"/></label>
+      </div>
+      <button class="send-btn" onclick="sendVaultFile()">Send</button>
+      <div id="sendDetail" style="margin-top: 17px; min-height: 2em;"></div>
+      <div style="color: #666; margin-top:10px; font-size:0.98em;">Only vault files are shown. To receive, open Received Files tab.</div>
+    </div>
+    <div id="content-recv" class="content-box" style="display:none;">
+      <div class="section-title">Received Files</div>
+      <div id="receivedList"></div>
+    </div>
+  </div>
+  <script>
+    // --- Basic tab logic ---
+    function switchTab(tab) {
+      document.getElementById('tab-send').classList.toggle('active', tab==='send');
+      document.getElementById('tab-recv').classList.toggle('active', tab==='recv');
+      document.getElementById('content-send').style.display = tab==='send' ? '' : 'none';
+      document.getElementById('content-recv').style.display = tab==='recv' ? '' : 'none';
+    }
+
+    function humanFileSize(bytes) {
+      const thresh = 1024;
+      if (Math.abs(bytes) < thresh) return bytes + ' B';
+      const units = ['kB','MB','GB','TB','PB','EB','ZB','YB'];
+      let u = -1;
+      do { bytes /= thresh; ++u; } while (Math.abs(bytes) >= thresh && u < units.length - 1);
+      return bytes.toFixed(1)+' '+units[u];
+    }
+
+    // --- Show only vault files in send tab ---
+    const vault_id = localStorage.getItem('vault_id');
+    function loadVaultFiles() {
+      fetch(`http://127.0.0.1:5000/api/vault/files?vault_id=${vault_id}`)
+        .then(res => res.json())
+        .then(data => {
+          const vaultFilesList = document.getElementById('vaultFilesList');
+          vaultFilesList.innerHTML = '';
+          if (!data.files || !data.files.length) {
+            vaultFilesList.innerHTML = '<div style="color:#bc0;">No files in your vault.</div>';
+            return;
+          }
+          data.files.forEach(file => {
+            const label = document.createElement('label');
+            const cb = document.createElement('input');
+            cb.type = "checkbox";
+            cb.name = "vaultfile";
+            cb.value = file.filename;
+            label.appendChild(cb);
+            label.append(" " + file.filename);
+            vaultFilesList.appendChild(label);
+          });
+        });
+    }
+    loadVaultFiles();
+
+    // --- Send vault file(s) to LAN peer ---
+    async function sendVaultFile() {
+      const sendDetail = document.getElementById('sendDetail');
+      sendDetail.textContent = "";
+      const ip = document.getElementById('ipInput').value.trim();
+      const selectedFiles = Array.from(document.querySelectorAll('input[name="vaultfile"]:checked')).map(cb => cb.value);
+      if (!selectedFiles.length || !ip) {
+        sendDetail.textContent = "Select vault file(s) and enter an IP address.";
+        return;
+      }
+      sendDetail.textContent = "Sending...";
+      for (const filename of selectedFiles) {
+        // Download vault file from your backend and upload to remote device
+        const res = await fetch(`http://127.0.0.1:5000/api/vault/download?filename=${encodeURIComponent(filename)}&vault_id=${vault_id}`);
+        const blob = await res.blob();
+        const formData = new FormData();
+        formData.append('file', new File([blob], filename));
+        try {
+          const sendRes = await fetch(`http://${ip}:5000/api/lan/file/receive`, {method: "POST", body: formData});
+          const data = await sendRes.json();
+          if (sendRes.ok) {
+            sendDetail.textContent = `File sent to ${ip}: ${filename}`;
+          } else {
+            sendDetail.textContent = data.error || `Failed to send ${filename}`;
+            break;
+          }
+        } catch {
+          sendDetail.textContent = "Error sending to " + ip;
+          break;
+        }
+      }
+    }
+
+    // --- Live received files list ---
+    async function refreshReceived() {
+      const div = document.getElementById('receivedList');
+      try {
+        const res = await fetch('http://127.0.0.1:5000/api/lan/incoming_files');
+        const files = await res.json();
+        if (!files.length) {
+          div.innerHTML = "<div class='small'>No received files.</div>";
+        } else {
+          div.innerHTML = files.map(f => `
+            <div class="received-file">
+              <b>${f.filename}</b>
+              <span class="small">(${humanFileSize(f.size)})</span>
+              <button class="save-btn" onclick="saveReceived('${f.filename}')">Save</button>
+              <button class="reject-btn" onclick="deleteReceived('${f.filename}')">Reject</button>
+            </div>
+          `).join('');
+        }
+      } catch {
+        div.innerHTML = "<div style='color:#c44;'>Error loading received files.</div>";
+      }
+    }
+    window.saveReceived = async function(filename) {
+      await fetch(`http://127.0.0.1:5000/api/lan/incoming_files/accept/${encodeURIComponent(filename)}`, {method:'POST'});
+      window.open(`http://127.0.0.1:5000/api/lan/incoming_files/${encodeURIComponent(filename)}`, '_blank');
+      setTimeout(refreshReceived, 700);
+    }
+    window.deleteReceived = async function(filename) {
+      await fetch(`http://127.0.0.1:5000/api/lan/incoming_files/reject/${encodeURIComponent(filename)}`, {method:'POST'});
+      setTimeout(refreshReceived, 700);
+    }
+    setInterval(refreshReceived, 3000);
+    refreshReceived();
+  </script>
+</body>
+</html>
