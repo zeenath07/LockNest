@@ -1,71 +1,72 @@
-import sqlite3
+from supabase import create_client, Client
 import datetime
 
-
-def get_db_connection():
-    conn = sqlite3.connect('database/locknest.db')
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def create_tables():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            vault_id TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL
-        )
-    ''')
-    conn.commit()
-    conn.close()
+# Replace these with your actual Supabase project details
+SUPABASE_URL = "https://czilbctugcypmgymjddd.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6aWxiY3R1Z2N5cG1neW1qZGRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyNzQ4NzEsImV4cCI6MjA3Nzg1MDg3MX0.4P9YC2SOU-TVgYK05Bdu1w28PmI4Fo4E-b-_XXpV2qM"
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
-def create_vault_table():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('''
-        CREATE TABLE IF NOT EXISTS vault_files (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            vault_id TEXT NOT NULL,
-            filename TEXT NOT NULL,
-            filepath TEXT NOT NULL,
-            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    conn.commit()
-    conn.close()
+# --- USERS table functions ---
+def add_user(vault_id, password):
+    response = supabase.table('users').insert({
+        "vault_id": vault_id,
+        "password": password
+    }).execute()
+    if response.error:
+        raise Exception(response.error.message)
+    return response.data
 
 
-def create_intruder_table():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    # Use timestamp as TEXT so custom formats work fine
-    cur.execute('''
-        CREATE TABLE IF NOT EXISTS intruders (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            vault_id TEXT NOT NULL,
-            image_path TEXT NOT NULL,
-            timestamp TEXT DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    conn.commit()
-    conn.close()
+def get_user_by_vault_id(vault_id):
+    response = supabase.table('users').select("*").eq("vault_id", vault_id).single().execute()
+    if response.error:
+        raise Exception(response.error.message)
+    return response.data
 
 
+# --- VAULT_FILES table functions ---
+def add_vault_file(vault_id, filename, filepath):
+    response = supabase.table('vault_files').insert({
+        "vault_id": vault_id,
+        "filename": filename,
+        "filepath": filepath,
+        "uploaded_at": datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    }).execute()
+    if response.error:
+        raise Exception(response.error.message)
+    return response.data
+
+
+def get_vault_files(vault_id):
+    response = supabase.table('vault_files').select("*").eq("vault_id", vault_id).execute()
+    if response.error:
+        raise Exception(response.error.message)
+    return response.data
+
+
+def delete_vault_file(vault_id, filename):
+    response = supabase.table('vault_files').delete().eq("vault_id", vault_id).eq("filename", filename).execute()
+    if response.error:
+        raise Exception(response.error.message)
+    return response.data
+
+
+# --- INTRUDERS table functions ---
 def insert_intruder(vault_id, image_path):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    # Format timestamp as 'YYYY-MM-DD HH:MM:SS' for SQLite compatibility and JS parsing
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    cur.execute("INSERT INTO intruders (vault_id, image_path, timestamp) VALUES (?, ?, ?)", 
-                (vault_id, image_path, timestamp))
-    conn.commit()
-    conn.close()
+    response = supabase.table('intruders').insert({
+        "vault_id": vault_id,
+        "image_path": image_path,
+        "timestamp": timestamp
+    }).execute()
+    if response.error:
+        raise Exception(response.error.message)
+    return response.data
 
 
-if __name__ == '__main__':
-    create_tables()
-    create_vault_table()
-    create_intruder_table()
+def get_intruders(vault_id):
+    response = supabase.table('intruders').select("*").eq("vault_id", vault_id).execute()
+    if response.error:
+        raise Exception(response.error.message)
+    return response.data

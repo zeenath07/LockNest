@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
-from backend.models.db import get_db_connection
 import hashlib
+from backend.models.db import add_user, get_user_by_vault_id, insert_intruder
 
 user_bp = Blueprint('user', __name__)
 
@@ -16,18 +16,12 @@ def signup():
     if not vault_id or not password:
         return jsonify({'error': 'Missing credentials'}), 400
 
-    conn = get_db_connection()
-    cur = conn.cursor()
-    # Check if vault_id exists
-    cur.execute('SELECT * FROM users WHERE vault_id = ?', (vault_id,))
-    if cur.fetchone():
-        conn.close()
+    existing_user = get_user_by_vault_id(vault_id)
+    if existing_user:
         return jsonify({'error': 'Vault ID already exists'}), 409
 
     hashed_password = hash_password(password)
-    cur.execute('INSERT INTO users (vault_id, password) VALUES (?, ?)', (vault_id, hashed_password))
-    conn.commit()
-    conn.close()
+    add_user(vault_id, hashed_password)
     return jsonify({'message': 'Signup successful'}), 201
 
 @user_bp.route('/login', methods=['POST'])
@@ -39,18 +33,11 @@ def login():
     if not vault_id or not password:
         return jsonify({'error': 'Missing credentials'}), 400
 
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('SELECT password FROM users WHERE vault_id = ?', (vault_id,))
-    row = cur.fetchone()
+    user = get_user_by_vault_id(vault_id)
 
-    # Check for correct password
-    if row and row['password'] == hash_password(password):
-        conn.close()
+    if user and user['password'] == hash_password(password):
         return jsonify({'message': 'Login successful'}), 200
     else:
-        # Log intruder attempt (fail with blank image path for now)
-        cur.execute('INSERT INTO intruders (vault_id, image_path) VALUES (?, ?)', (vault_id or '(none)', ''))
-        conn.commit()
-        conn.close()
+        # Log intruder attempt (blank image path for now)
+        insert_intruder(vault_id or '(none)', '')
         return jsonify({'error': 'Invalid credentials'}), 401

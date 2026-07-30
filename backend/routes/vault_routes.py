@@ -1,8 +1,8 @@
 import os
 from io import BytesIO
 from flask import Blueprint, request, jsonify, send_file
-from backend.models.db import get_db_connection
 from cryptography.fernet import Fernet
+from backend.models.db import get_vault_files, add_vault_file, delete_vault_file
 
 vault_bp = Blueprint('vault', __name__)
 
@@ -23,11 +23,7 @@ fernet = Fernet(FERNET_KEY)
 @vault_bp.route('/files', methods=['GET'])
 def get_files():
     vault_id = request.args.get('vault_id')
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('SELECT filename, uploaded_at FROM vault_files WHERE vault_id = ?', (vault_id,))
-    files = [{'filename': row[0], 'uploaded_at': row[1]} for row in cur.fetchall()]
-    conn.close()
+    files = get_vault_files(vault_id)
     return jsonify({'files': files})
 
 @vault_bp.route('/upload', methods=['POST'])
@@ -47,12 +43,7 @@ def upload_file():
         f.write(encrypted_content)
 
     # Store original filename but save path to encrypted file in DB
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('INSERT INTO vault_files (vault_id, filename, filepath) VALUES (?, ?, ?)',
-                (vault_id, filename, filepath))
-    conn.commit()
-    conn.close()
+    add_vault_file(vault_id, filename, filepath)
     return jsonify({'message': 'File uploaded and encrypted successfully'})
 
 @vault_bp.route('/download', methods=['GET'])
@@ -90,11 +81,7 @@ def delete_file():
         deleted = True
 
     # Delete from DB
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('DELETE FROM vault_files WHERE vault_id = ? AND filename = ?', (vault_id, filename))
-    conn.commit()
-    conn.close()
+    delete_vault_file(vault_id, filename)
 
     if deleted:
         return jsonify({'message': f'{filename} deleted successfully.'})
